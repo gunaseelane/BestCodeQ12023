@@ -19,6 +19,7 @@ token = "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwOi8vbG9jYWx
 
 headers = {"Content-Type": "application/json","Authorization":token,"Origin":"http://localhost:8080"}
 
+mentions = []
 #Functions
 def string_ends_with(string, items):
     """Check if a given string ends with any of the items in a given array"""
@@ -64,7 +65,7 @@ with open(os.path.join(save_path,'posts.csv'), 'w', newline='', encoding='utf-8'
         #inceasing counter
         counter+=1
 
-        if counter > 30 and counter < 60 and status == 'OK':
+        if counter <= 60 and status == 'OK':
 
             post_data=[]
 
@@ -151,7 +152,12 @@ with open(os.path.join(save_path,'posts.csv'), 'w', newline='', encoding='utf-8'
             soup = BeautifulSoup(html_body, 'html.parser')
             for element in soup.find_all("table", {"class":"post-footer-container"}):
                 element.decompose()
-            print('Unwanted Footer Removed')
+
+            for element in soup.find_all("table", {"class":"email-max-width"}):
+                element['style'] = "border-collapse: collapse; border-spacing: 0; padding: 0; vertical-align: top;";
+
+            for element in soup.find_all("table", {"class":"files-container"}):
+                element.decompose()
 
             # print(res)
             for img_tag in soup.find_all('img'):
@@ -179,6 +185,7 @@ with open(os.path.join(save_path,'posts.csv'), 'w', newline='', encoding='utf-8'
 
             #Find all mentions
             for mention in soup.find_all('span',{"class":"mention fr-tribute"}):
+                mentions.append(mention.text)
                 mention.string = 'MENTION_START:::'+mention.text+':::MENTION_END'
 
             # Find all the links in the HTML body
@@ -199,32 +206,32 @@ with open(os.path.join(save_path,'posts.csv'), 'w', newline='', encoding='utf-8'
                         parsed_url = urlparse(href)
                         captured_value = parse_qs(parsed_url.query)['url'][0]
                         link['href'] = captured_value
-                        if(link.string != None):
-                            link.string = 'LINK_START:::LINK:::'+link['href']+':::LINK_NAME:::'+link.string.strip()+':::LINK_END'
-                            index = link.parent.contents.index(link)
-                            link.parent.insert(index+1,link.string)
-                            link.decompose()
+                        # if(link.string != None):
+                        #     link.string = 'LINK_START:::LINK:::'+link['href']+':::LINK_NAME:::'+link.string.strip()+':::LINK_END'
+                        #     index = link.parent.contents.index(link)
+                        #     link.parent.insert(index+1,link.string)
+                        #     link.decompose()
 
-                        else:
-                            link.string = 'LINK_START:::LINK:::'+link['href']+':::LINK_NAME:::'+link['href']+':::LINK_END'
-                            index= link.parent.contents.index(link)
-                            link.parent.insert(index+1,link.string)
-                            link.decompose()
+                        # else:
+                        #     link.string = 'LINK_START:::LINK:::'+link['href']+':::LINK_NAME:::'+link['href']+':::LINK_END'
+                        #     index= link.parent.contents.index(link)
+                        #     link.parent.insert(index+1,link.string)
+                        #     link.decompose()
                     else :
                         if 'http://dckap.mobilize.io/links?' in href and 'url=' in href:
                             parsed_url = urlparse(href)
                             captured_value = parse_qs(parsed_url.query)['url'][0]
                             link['href'] = captured_value
-                            if(link.string != None):
-                                link.string = 'LINK_START:::LINK:::'+link['href']+':::LINK_NAME:::'+link.string.strip()+':::LINK_END'
-                                index= link.parent.contents.index(link)
-                                link.parent.insert(index+1,link.string)
-                                link.decompose()
-                            else:
-                                link.string = 'LINK_START:::LINK:::'+link['href']+':::LINK_NAME:::'+link['href']+':::LINK_END'
-                                index= link.parent.contents.index(link)
-                                link.parent.insert(index+1,link.string)
-                                link.decompose()
+                            # if(link.string != None):
+                            #     link.string = 'LINK_START:::LINK:::'+link['href']+':::LINK_NAME:::'+link.string.strip()+':::LINK_END'
+                            #     index= link.parent.contents.index(link)
+                            #     link.parent.insert(index+1,link.string)
+                            #     link.decompose()
+                            # else:
+                            #     link.string = 'LINK_START:::LINK:::'+link['href']+':::LINK_NAME:::'+link['href']+':::LINK_END'
+                            #     index= link.parent.contents.index(link)
+                            #     link.parent.insert(index+1,link.string)
+                            #     link.decompose()
                         else:
                             print(link)
 
@@ -232,7 +239,7 @@ with open(os.path.join(save_path,'posts.csv'), 'w', newline='', encoding='utf-8'
 
             text_part = str(soup.prettify())
 
-            with open('Mobilize/index-'+str(counter)+'.html', 'w') as f:
+            with open('Mobilize/'+subject+'.html', 'w') as f:
                         f.write(text_part)
             post_data.append(posts_dictionary[subject])
             post_data.append(sender)
@@ -240,7 +247,6 @@ with open(os.path.join(save_path,'posts.csv'), 'w', newline='', encoding='utf-8'
             post_data.append(text_part)
             post_data.append(save_path)
             post_data.append(timestamp)
-            writer.writerow(post_data)
             print('--------------------post api-----------------')
             data = {
                 "title":"Post Owner : "+sender+" - "+subject,
@@ -260,13 +266,20 @@ with open(os.path.join(save_path,'posts.csv'), 'w', newline='', encoding='utf-8'
             print("Status Code", response.status_code)
             # # print("JSON Response ", response.json())
             print('--------------------Added to Main CSV File-----------------')
+            writer.writerow(post_data)
             print('')
         else:
             if counter > 60:
                 break
             continue        
-        
-                
+
+with open(os.path.join('Mobilize','mentions.csv'), 'w', newline='', encoding='utf-8') as fileMention:
+    mWriter = csv.writer(fileMention)
+    mWriter.writerow(["Name","email"])
+    for mention in mentions:
+        print(mention)
+        mWriter.writerow([mention,""])
+
 print("Completed extracting.... Analysing Possible Duplicate Posts....")
 
 # Print Possible Duplicate Posts
