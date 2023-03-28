@@ -20,12 +20,12 @@ token = "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwOi8vbG9jYWx
 headers = {"Content-Type": "application/json","Authorization":token,"Origin":"http://localhost:8080"}
 
 mentions = []
+utf = []
 #Functions
 def string_ends_with(string, items):
     """Check if a given string ends with any of the items in a given array"""
     for item in items:
         if string.endswith(item):
-            print(string,item)
             return True
     return False
 def string_starts_with(string, items):
@@ -65,7 +65,7 @@ with open(os.path.join(save_path,'posts.csv'), 'w', newline='', encoding='utf-8'
         #inceasing counter
         counter+=1
 
-        if counter <= 60 and status == 'OK':
+        if status == 'OK':
 
             post_data=[]
 
@@ -78,6 +78,9 @@ with open(os.path.join(save_path,'posts.csv'), 'w', newline='', encoding='utf-8'
             sender = msg['From']
             subject = msg['Subject']
             timestamp = msg['Date']
+            if('UTF' in subject):
+                utf.append(subject)
+            
 
             #formatting mobilize email <srijas.dckap@members.mobilize.io> to dckap email srijas.dckap@com
             sender = sender.replace('.dckap@members.mobilize.io','@dckap.com').replace('<','').replace('>','')
@@ -144,7 +147,7 @@ with open(os.path.join(save_path,'posts.csv'), 'w', newline='', encoding='utf-8'
                     html_body = part.get_payload(decode=True).decode('utf-8')
 
             if html_body:
-                save_path=os.path.join(os.getcwd(),'Mobilize/'+subject+'-'+str(posts_dictionary[subject]))
+                save_path=os.path.join(os.getcwd(),'Mobilize/'+str(posts_dictionary[subject]))
                 if not os.path.exists(save_path):
                       os.makedirs(save_path)
                       
@@ -159,16 +162,22 @@ with open(os.path.join(save_path,'posts.csv'), 'w', newline='', encoding='utf-8'
             for element in soup.find_all("table", {"class":"files-container"}):
                 element.decompose()
 
-            # print(res)
+            if len(soup.find_all("table", {"class":"event-details"})):
+                continue
+            if len(soup.find_all("table", {"class":"poll-text"})):
+                continue
+
             for img_tag in soup.find_all('img'):
                 ignore = [
                     'https://d3ft6bzqwbqgiw.cloudfront.net/emails/heart_footer.png',
                     'http://dckap.mobilize.io/email_opens',
                     ]
                 if string_starts_with(img_tag['src'],ignore):
+                    img_tag.decompose()
                     continue
                 if 'alt' in img_tag:
                     if img_tag['alt'] == 'Preview image':
+                        img_tag.decompose()
                         continue
                 img_url = img_tag['src']
                 img_name = os.path.basename(img_tag['src'])
@@ -181,12 +190,11 @@ with open(os.path.join(save_path,'posts.csv'), 'w', newline='', encoding='utf-8'
                     pass
                 img_tag['alt']="IMAGE:"+img_name # Update alt tag
             
-            print('Post Images/Videos Downloaded')
 
             #Find all mentions
-            for mention in soup.find_all('span',{"class":"mention fr-tribute"}):
-                mentions.append(mention.text)
-                mention.string = 'MENTION_START:::'+mention.text+':::MENTION_END'
+            # for mention in soup.find_all('span',{"class":"mention fr-tribute"}):
+            #     mentions.append(mention.text)
+            #     mention.string = 'MENTION_START:::'+mention.text+':::MENTION_END'
 
             # Find all the links in the HTML body
             # Download the files
@@ -194,13 +202,14 @@ with open(os.path.join(save_path,'posts.csv'), 'w', newline='', encoding='utf-8'
                 href = link.get('href')
                 allowedTypes = ['.pdf','.jpg','.png','.jpeg','.mp4','.xlsx','.gif','.xls','.doc','.docx']
                 if string_ends_with(href,allowedTypes): #endswith('.pdf') or href.endswith('.jpg') or href.endswith('.png') or href.endswith('.jpeg') or href.endswith('.mp4') or href.endswith('.xlsx') or href.endswith('.gif') or href.endswith('.xls') or href.endswith('.doc') or href.endswith('.docx'):
-                    # Make a GET request to the URL of the file and download the content
-                    file_response = requests.get(href)
-                    file_content = file_response.content
-                    # Write the file content to a local file with the same name as the remote file
-                    with open(save_path+'/'+href.split('/')[-1], 'wb') as f:
-                        f.write(file_content)
-                    link['href'] = save_path+'/'+href.split('/')[-1]
+                    # # Make a GET request to the URL of the file and download the content
+                    # file_response = requests.get(href)
+                    # file_content = file_response.content
+                    # # Write the file content to a local file with the same name as the remote file
+                    # with open(save_path+'/'+href.split('/')[-1], 'wb') as f:
+                    #     f.write(file_content)
+                    # link['href'] = save_path+'/'+href.split('/')[-1]
+                    continue
                 else:
                     if 'http://app.mobilize.io/widget_clicks' in href and 'click?click_source=link_preview' in href:
                         parsed_url = urlparse(href)
@@ -235,11 +244,9 @@ with open(os.path.join(save_path,'posts.csv'), 'w', newline='', encoding='utf-8'
                         else:
                             print(link)
 
-            print('Post Remote media Downloaded')
-
             text_part = str(soup.prettify())
 
-            with open('Mobilize/'+subject+'.html', 'w') as f:
+            with open('Mobilize/'+str(posts_dictionary[subject])+'.html', 'w') as f:
                         f.write(text_part)
             post_data.append(posts_dictionary[subject])
             post_data.append(sender)
@@ -268,20 +275,19 @@ with open(os.path.join(save_path,'posts.csv'), 'w', newline='', encoding='utf-8'
             print('--------------------Added to Main CSV File-----------------')
             writer.writerow(post_data)
             print('')
-        else:
-            if counter > 60:
-                break
-            continue        
+        # else:
+        #     if counter > 60:
+        #         break
+        #     continue        
 
 with open(os.path.join('Mobilize','mentions.csv'), 'w', newline='', encoding='utf-8') as fileMention:
     mWriter = csv.writer(fileMention)
     mWriter.writerow(["Name","email"])
     for mention in mentions:
-        print(mention)
         mWriter.writerow([mention,""])
 
 print("Completed extracting.... Analysing Possible Duplicate Posts....")
-
+print(utf)
 # Print Possible Duplicate Posts
 DulicateCount = 0
 for key in posts_dictionary:
