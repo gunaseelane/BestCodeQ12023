@@ -9,9 +9,13 @@ import urllib.parse
 from urllib.parse import urlparse
 from urllib.parse import parse_qs
 from colorama import Fore, Back, Style
+import json
 
 # importing the requests library
 import requests
+
+credentials = json.load(open('creds.json'))
+
 
 # defining the api-endpoint 
 API_ENDPOINT = "http://localhost:8000/api/posts"
@@ -37,8 +41,8 @@ def string_starts_with(string, items):
 
 # Connect to IMAP server
 imap_server = imaplib.IMAP4_SSL('imap.gmail.com')
-user = 'gunaseelane@dckap.com' # Mail ID from which data is to be extracted
-password = 'ldsqkqwqzwcpehem' # 16 Digit App Password
+user = credentials['email'] # Mail ID from which data is to be extracted
+password = credentials['password'] # 16 Digit App Password
 imap_server.login(user, password)
 
 # Select the Inbox folder
