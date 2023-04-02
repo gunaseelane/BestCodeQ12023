@@ -18,13 +18,14 @@ credentials = json.load(open('creds.json'))
 
 
 # defining the api-endpoint 
-API_ENDPOINT = "http://localhost:8000/api/posts"
-token = "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwOi8vbG9jYWxob3N0OjgwMDAvYXBpL2xvZ2luIiwiaWF0IjoxNjc4Mzc0NzcyLCJuYmYiOjE2NzgzNzQ3NzIsImp0aSI6Ik5WdG1qWWg5c2NUd1FrQVYiLCJzdWIiOiIyIiwicHJ2IjoiMjNiZDVjODk0OWY2MDBhZGIzOWU3MDFjNDAwODcyZGI3YTU5NzZmNyJ9.0DkOe5NhR8fgF5zouAIqi40-YMxw5KGeyQwL-sV6dG0"
+API_ENDPOINT = credentials['zircly_api']
+token = credentials['token']
 
-headers = {"Content-Type": "application/json","Authorization":token,"Origin":"http://localhost:8080"}
+headers = {"Content-Type": credentials['Content-Type'],"Authorization":token,"Origin":credentials['Origin']}
 
 mentions = []
 utf = []
+
 #Functions
 def string_ends_with(string, items):
     """Check if a given string ends with any of the items in a given array"""
@@ -69,11 +70,9 @@ with open(os.path.join(save_path,'posts.csv'), 'w', newline='', encoding='utf-8'
         #inceasing counter
         counter+=1
 
-        if status == 'OK':
+        if counter <60 and  status == 'OK':
 
-            post_data=[]
-
-            
+            post_data=[]         
 
             # Parse email message
             raw_email = msg_data[0][1].decode("utf-8")
@@ -86,7 +85,7 @@ with open(os.path.join(save_path,'posts.csv'), 'w', newline='', encoding='utf-8'
                 utf.append(subject)
             
 
-            #formatting mobilize email <srijas.dckap@members.mobilize.io> to dckap email srijas.dckap@com
+            #formatting mobilize email <srijas.dckap@members.mobilize.io> to dckap email srijas@dckap.com
             sender = sender.replace('.dckap@members.mobilize.io','@dckap.com').replace('<','').replace('>','')
 
 
@@ -102,7 +101,7 @@ with open(os.path.join(save_path,'posts.csv'), 'w', newline='', encoding='utf-8'
             if string_starts_with(subject,Skip):
                 continue
 
-
+            # Printing the subjects of the emails processed
             print(counter,"-",subject)
 
             # To Track Possible Duplicate Posts
@@ -140,11 +139,8 @@ with open(os.path.join(save_path,'posts.csv'), 'w', newline='', encoding='utf-8'
                 print(Style.RESET_ALL)
             else:
                 print('No Attachments...')
-            
 
-            # Printing the subjects of the emails processed
-
-            #Get HTML Body
+            #Get Post's HTML Body
             html_body = None
             for part in msg.walk():
                 if part.get_content_type() == 'text/html':
@@ -183,16 +179,16 @@ with open(os.path.join(save_path,'posts.csv'), 'w', newline='', encoding='utf-8'
                     if img_tag['alt'] == 'Preview image':
                         img_tag.decompose()
                         continue
-                img_url = img_tag['src']
-                img_name = os.path.basename(img_tag['src'])
-                img_path = os.path.join(save_path,img_name)
-                try:
-                    with open(img_path, 'wb') as img_file:
-                        img_file.write(requests.get(img_url).content)
-                        # img_tag['src'] = img_path
-                except:
-                    pass
-                img_tag['alt']="IMAGE:"+img_name # Update alt tag
+                # img_url = img_tag['src']
+                # img_name = os.path.basename(img_tag['src'])
+                # img_path = os.path.join(save_path,img_name)
+                # try:
+                #     with open(img_path, 'wb') as img_file:
+                #         img_file.write(requests.get(img_url).content)
+                #         # img_tag['src'] = img_path
+                # except:
+                #     pass
+                # img_tag['alt']="IMAGE:"+img_name # Update alt tag
             
 
             #Find all mentions
@@ -204,6 +200,9 @@ with open(os.path.join(save_path,'posts.csv'), 'w', newline='', encoding='utf-8'
             # Download the files
             for link in soup.find_all('a'):
                 href = link.get('href')
+                if('http://dckap.mobilize.io/main/groups' in href and 'lounge?userId' in href):
+                    link.decompose()
+                    continue
                 allowedTypes = ['.pdf','.jpg','.png','.jpeg','.mp4','.xlsx','.gif','.xls','.doc','.docx']
                 if string_ends_with(href,allowedTypes): #endswith('.pdf') or href.endswith('.jpg') or href.endswith('.png') or href.endswith('.jpeg') or href.endswith('.mp4') or href.endswith('.xlsx') or href.endswith('.gif') or href.endswith('.xls') or href.endswith('.doc') or href.endswith('.docx'):
                     # # Make a GET request to the URL of the file and download the content
@@ -246,7 +245,7 @@ with open(os.path.join(save_path,'posts.csv'), 'w', newline='', encoding='utf-8'
                             #     link.parent.insert(index+1,link.string)
                             #     link.decompose()
                         else:
-                            print(link)
+                            print('###################-'+link['href'])
 
             text_part = str(soup.prettify())
 
@@ -270,6 +269,7 @@ with open(os.path.join(save_path,'posts.csv'), 'w', newline='', encoding='utf-8'
                 "is_draft":"false",
                 "is_scheduled":"false",
                 "is_published":"true",
+                "posted_at":timestamp
             }
              
             response = requests.post(API_ENDPOINT, headers=headers, json=data)
@@ -279,16 +279,16 @@ with open(os.path.join(save_path,'posts.csv'), 'w', newline='', encoding='utf-8'
             print('--------------------Added to Main CSV File-----------------')
             writer.writerow(post_data)
             print('')
-        # else:
-        #     if counter > 60:
-        #         break
-        #     continue        
+        else:
+            if counter > 60:
+                break
+            continue        
 
-with open(os.path.join('Mobilize','mentions.csv'), 'w', newline='', encoding='utf-8') as fileMention:
-    mWriter = csv.writer(fileMention)
-    mWriter.writerow(["Name","email"])
-    for mention in mentions:
-        mWriter.writerow([mention,""])
+# with open(os.path.join('Mobilize','mentions.csv'), 'w', newline='', encoding='utf-8') as fileMention:
+#     mWriter = csv.writer(fileMention)
+#     mWriter.writerow(["Name","email"])
+#     for mention in mentions:
+#         mWriter.writerow([mention,""])
 
 print("Completed extracting.... Analysing Possible Duplicate Posts....")
 print(utf)
