@@ -1,0 +1,71 @@
+Best Code Submission - Restoring DCKAP's History , Mobilize to Zircly
+
+Why and Why Now?
+	-To avoid DCKAP Data(History) Loss.
+	-Mobilize is not free anymore , we are planing to excute this in DCKAP and write a blog about it . if any other mobilize client's want to Export Data. or join zircly. which mobilize charges 5k to 15k USD.
+	-Know About Fellow Employee
+		- if a new joined wants to know about his manager or teammates , he/she can just search their name in zircly , and zircly will list all the post they were mentioned. their appreciation , their achivements etc. basically we will have employee career history.
+	Dificulties.
+		No Mobilize Support.
+		No API Available in Mobilize.
+		They asked for money to export our data from their DB.
+
+Email Authorization and Security
+
+	To begin the program, create an app and generate a token from a Google account, then enter the token into the creds.json file.
+
+Program
+
+	Email Credentials
+
+	Filter inbox emails by Mobilize email.
+
+	Format Mobilize sender email srijas.dckap@members.mobilize.io to DCKAP email srijas@dckap.com.
+
+	Skip comments and replies.
+
+	Track possible duplicate posts (sometimes people update the post and the same post might have 2 emails).
+
+	Download email attachments and store them in the post folder. However, it is not possible to download any email with attachments since Mobilize always embeds file attachments within their post's HTML body itself. 
+		For example:
+			Congratulations Kannathasan!!!!
+			Link: https://dckap.mobilize.io/file_attachments/89810/external_download?email_token=NLldv6oStGBzP9wuSn_elw
+			Reason: DCKAP account is blocked and we can't download it.
+
+	Get post's HTML body.
+
+	Remove unwanted HTML parts from the body:
+
+		Join conversation button.
+		Body width is fixed; it will not work for Zircly.
+		Remove polls because we have a separate module in Zircly for them.
+		Remove events because we have a separate module in Zircly for them.
+		Remove unwanted images from HTML body, such as heart icon png and preview images of post links.
+
+	Download post images and store them in the post folders. However, the code is commented out since Zircly will download them from the cloud before storing the post.
+
+	Find all people mentions and replace them with the pattern, so in Zircly we can replace them with user data:
+
+		MENTION_START:::'+mention.text+':::MENTION_END
+
+		The code is commented out because we don't have all people's data from 3 years back in DCKAP. So we leave it as text, but it will be highlighted like Zircly mentions in blue.
+
+	Find all the links in the HTML body and format them. Mobilize always publishes links with their domain, so when a user clicks it in the inbox, they will be redirected to Mobilize domain and the user will have to proceed button to redirect to the target link. For example:
+		"https://dckap.mobilize.com?url='www.google.com'" => www.google.com
+
+	Generate an HTML file to test it on the browser.
+
+	Generate JSON and send it to DCKAP Zircly using the given API.
+
+	Add post records to the CSV file posts.csv.
+
+	Summarize Program (Report)
+
+		List possible duplicates, for example, 10-Post Title - Duplicates 9-Post Title.
+		Number of duplicates.
+		List encoded title, unable to decode. They are very few, so we decided to fix them manually.
+
+	Negatives
+		Attachments can't be restored.
+		Likes and comments can't be restored.
+		If the post owner is no longer with us, the post will be posted by Zircly Intelligence. The post title will have "Post Owner: Gunaseelan (gunaseelane@dckap.com, "<Post Title>").
